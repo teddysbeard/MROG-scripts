@@ -18,7 +18,7 @@ from scipy.optimize import curve_fit
 from numpy import arange
 
 
-#const
+#const#
 ADC_freq_Hz = 500000
 ticks = 1/ADC_freq_Hz
 velocity_sweep = 5000000000

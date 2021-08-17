@@ -115,6 +115,7 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 center_values_ch1.append(result.params['center'].value)
                 #print(i)
                 int_fit_ch1.append(dif_peaks_ch1)
+            print(int_fit_ch1)
         else:
             if filename.find('Ch2') != -1 and filename.find('-') == -1:
                 print(filename)
@@ -158,8 +159,8 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 # print('Time peaks ch2', peaks_time_ch2)
 
                 # Find interval fitting ch2
-                int_fit_ch1 = []
-                center_values_ch1 = []
+                int_fit_ch2 = []
+                center_values_ch2 = []
                 for i in range(1, len(index_peaks_ch2) - 1):
                     dif_peaks_ch2 = ((index_peaks_ch2[i + 1] - index_peaks_ch2[i]))
                     dif_peaks_ch2_del = round(dif_peaks_ch2 / 2)
@@ -188,9 +189,27 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     center_values_ch2.append(result.params['center'].value)
                     #print(i)
                     int_fit_ch2.append(dif_peaks_ch2)
+                print(int_fit_ch2)
                 print('Модель функции: ', model_func)
                 print('Центры пиков функции ch1: ', center_values_ch1)
                 print('Центры пиков функции ch2: ', center_values_ch2)
+                # calc dif times and freq
+                dif = []
+                freq = []
+
+                for i in range(0, len(center_values_ch1)):
+                    dif.append((center_values_ch1[i] - center_values_ch2[i]))
+
+                for i in range(0, len(center_values_ch1)):
+                    freq.append((center_values_ch1[i] - center_values_ch2[i]) * velocity_sweep)
+
+                print('Разность времен: ', dif)
+                print('Разность частот: ', freq)
+                avg_freq = np.mean(freq)
+                print("Сдвиг частот ср.: ", avg_freq)
+                noise_freq = np.std(freq)
+                print("Шум частот : ", noise_freq)
+                mas_freq_noise.append(noise_freq)
                 #dif = peaks_time_ch1 - peaks_time_ch2
                 # print('Difference', dif1)
                 # print('Разность времен: ', dif)
@@ -249,7 +268,8 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
             #mas.append(peaks_time_ch1)
 
             # Find interval fitting ch1
-
+            int_fit_ch1 = []
+            center_values_ch1 = []
             for i in range(1, len(index_peaks_ch1) - 1):
                 dif_peaks_ch1 = ((index_peaks_ch1[i + 1] - index_peaks_ch1[i]))
                 dif_peaks_ch1_del = round(dif_peaks_ch1 / 2)
@@ -278,6 +298,7 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 center_values_ch1.append(result.params['center'].value)
                 #print(i)
                 int_fit_ch1.append(dif_peaks_ch1)
+            print(int_fit_ch1)
         else:
             if filename.find('Ch2') != -1 and filename.find('-') != -1:
                 print(filename)
@@ -316,6 +337,8 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 # print('Time peaks ch2', peaks_time_ch2)
 
                 # Find interval fitting ch2
+                int_fit_ch2 = []
+                center_values_ch2 = []
                 for i in range(1, len(index_peaks_ch2) - 1):
                     dif_peaks_ch2 = ((index_peaks_ch2[i + 1] - index_peaks_ch2[i]))
                     dif_peaks_ch2_del = round(dif_peaks_ch2 / 2)
@@ -344,9 +367,28 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     center_values_ch2.append(result.params['center'].value)
                     #print(i)
                     int_fit_ch2.append(dif_peaks_ch2)
+                print(int_fit_ch2)
                 print('Модель функции: ', model_func)
                 print('Центры пиков функции ch1: ', center_values_ch1)
                 print('Центры пиков функции ch2: ', center_values_ch2)
+
+                # calc dif times and freq
+                dif = []
+                freq = []
+
+                for i in range(0, len(center_values_ch1)):
+                    dif.append((center_values_ch1[i] - center_values_ch2[i]))
+
+                for i in range(0, len(center_values_ch1)):
+                    freq.append((center_values_ch1[i] - center_values_ch2[i]) * velocity_sweep)
+
+                print('Разность времен: ', dif)
+                print('Разность частот: ', freq)
+                avg_freq = np.mean(freq)
+                print("Сдвиг частот ср.: ", avg_freq)
+                noise_freq = np.std(freq)
+                print("Шум частот : ", noise_freq)
+                mas_freq_noise.append(noise_freq)
                 #dif = peaks_time_ch1 - peaks_time_ch2
                 #print('Разность времен: ', dif)
                 #freq = dif * velocity_sweep

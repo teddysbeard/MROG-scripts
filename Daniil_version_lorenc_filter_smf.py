@@ -29,31 +29,32 @@ N_filt = 1
 F_filt_ch1 = 900
 F_filt_ch2 = 900
 model_func = LorentzianModel ()
+
 mas_avg_freq = []
 mas_ang_vel = []
 ang_velocity = ''
 mas_freq_noise = []
-int_fit_ch1 = []
-int_fit_ch2 = []
-center_values_ch1 = []
-center_values_ch2 = []
+#int_fit_ch1 = []
+#int_fit_ch2 = []
+#center_values_ch1 = []
+#center_values_ch2 = []
+
 # Цикл для открытия нескольких файлов
 for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
     for file in files:
         filename, extension = os.path.splitext(file)
 # Часть цикла для положительного направления вращения
-        if filename.find('Ch1') != -1 and filename.find('-') ==-1:
+        if filename.find('Ch1') != -1 and filename.find('-') ==- 1:
             print(filename)
             #print(filename.find('_degs_'))
             ang_velocity = int(filename[0:filename.find('ds_')])
             print(ang_velocity)
             mas_ang_vel.append(ang_velocity)
-            #mas_ang_vel.append()
+
             # download file mesurment
             x1 = pd.read_csv('E:\\KDA\\files\\smfresonator\\%s.csv' % filename, delimiter=',', names=['2', '1', 'ch1'], skiprows=6, engine='python')
             df_ch1 = pd.DataFrame(x1, columns=['ch1'])
-            t = pd.DataFrame(x1, columns=['1'])# for ch1
-
+            t = pd.DataFrame(x1, columns=['1'])
             # for ch1
             y1 = df_ch1.values.flatten()
 
@@ -79,12 +80,13 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
             peaks_time_ch1 = index_peaks_ch1 * ticks
             peaks_time_ch1_array = len(peaks_time_ch1.values)
 
-            #print('Index peaks ch1', index_peaks_ch1)
+            print('Index peaks ch1', index_peaks_ch1)
             #print('Quant peaks ch1', peaks_time_ch1_array)
             #print('Time peaks ch1', peaks_time_ch1)
 
             # Find interval fitting ch1
-
+            int_fit_ch1 = []
+            center_values_ch1 = []
             for i in range(1, len(index_peaks_ch1) - 1):
                 dif_peaks_ch1 = ((index_peaks_ch1[i + 1] - index_peaks_ch1[i]))
                 dif_peaks_ch1_del = round(dif_peaks_ch1 / 2)
@@ -151,12 +153,13 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 peaks_time_ch2 = index_peaks_ch2 * ticks
                 peaks_time_ch2_array = len(peaks_time_ch2.values)
 
-                # print('Index peaks ch2', index_peaks_ch2)
+                print('Index peaks ch2', index_peaks_ch2)
                 # print('Quant peaks ch2', peaks_time_ch2_array)
                 # print('Time peaks ch2', peaks_time_ch2)
 
                 # Find interval fitting ch2
-
+                int_fit_ch1 = []
+                center_values_ch1 = []
                 for i in range(1, len(index_peaks_ch2) - 1):
                     dif_peaks_ch2 = ((index_peaks_ch2[i + 1] - index_peaks_ch2[i]))
                     dif_peaks_ch2_del = round(dif_peaks_ch2 / 2)
@@ -185,9 +188,9 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     center_values_ch2.append(result.params['center'].value)
                     #print(i)
                     int_fit_ch2.append(dif_peaks_ch2)
-        print('Модель функции: ', model_func)
-        print('Центры пиков функции ch1: ', center_values_ch1)
-        print('Центры пиков функции ch2: ', center_values_ch2)
+                print('Модель функции: ', model_func)
+                print('Центры пиков функции ch1: ', center_values_ch1)
+                print('Центры пиков функции ch2: ', center_values_ch2)
                 #dif = peaks_time_ch1 - peaks_time_ch2
                 # print('Difference', dif1)
                 # print('Разность времен: ', dif)
@@ -203,7 +206,7 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
 for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
     for file in files:
         filename, extension = os.path.splitext(file)
-        if filename.find('Ch1') != -1 and filename.find('-') !=-1:
+        if filename.find('Ch1') != -1 and filename.find('-') != -1:
             print(filename)
             #print(filename.find('_degs_'))
             ang_velocity = int(filename[0:filename.find('ds_')])
@@ -240,7 +243,7 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
             peaks_time_ch1 = index_peaks_ch1 * ticks
             peaks_time_ch1_array = len(peaks_time_ch1.values)
 
-            #print('Index peaks ch1', index_peaks_ch1)
+            print('Index peaks ch1', index_peaks_ch1)
             #print('Quant peaks ch1', peaks_time_ch1_array)
             #print('Time peaks ch1', peaks_time_ch1)
             #mas.append(peaks_time_ch1)
@@ -308,7 +311,7 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 index_peaks_ch2 = zdf_ch2[indexdf].index
                 peaks_time_ch2 = index_peaks_ch2 * ticks
                 peaks_time_ch2_array = len(peaks_time_ch2.values)
-                # print('Index peaks ch2', index_peaks_ch2)
+                print('Index peaks ch2', index_peaks_ch2)
                 # print('Quant peaks ch2', peaks_time_ch2_array)
                 # print('Time peaks ch2', peaks_time_ch2)
 
@@ -341,9 +344,9 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     center_values_ch2.append(result.params['center'].value)
                     #print(i)
                     int_fit_ch2.append(dif_peaks_ch2)
-        print('Модель функции: ', model_func)
-        print('Центры пиков функции ch1: ', center_values_ch1)
-        print('Центры пиков функции ch2: ', center_values_ch2)
+                print('Модель функции: ', model_func)
+                print('Центры пиков функции ch1: ', center_values_ch1)
+                print('Центры пиков функции ch2: ', center_values_ch2)
                 #dif = peaks_time_ch1 - peaks_time_ch2
                 #print('Разность времен: ', dif)
                 #freq = dif * velocity_sweep

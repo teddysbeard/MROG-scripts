@@ -207,6 +207,7 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 print('Разность частот: ', freq)
                 avg_freq = np.mean(freq)
                 print("Сдвиг частот ср.: ", avg_freq)
+                mas_avg_freq.append(avg_freq)
                 noise_freq = np.std(freq)
                 print("Шум частот : ", noise_freq)
                 mas_freq_noise.append(noise_freq)
@@ -221,6 +222,10 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 #noise_freq = np.std(freq)
                 #print("Шум частот : ", noise_freq)
                 #mas_freq_noise.append(noise_freq)
+
+
+
+
 # Часть цикла для отрицательного направления вращения
 for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
     for file in files:
@@ -386,6 +391,7 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 print('Разность частот: ', freq)
                 avg_freq = np.mean(freq)
                 print("Сдвиг частот ср.: ", avg_freq)
+                mas_avg_freq.append(avg_freq)
                 noise_freq = np.std(freq)
                 print("Шум частот : ", noise_freq)
                 mas_freq_noise.append(noise_freq)
@@ -399,6 +405,42 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 #noise_freq = np.std(freq)
                 #print("Шум частот : ", noise_freq)
                 #mas_freq_noise.append(noise_freq)
+print('Массив ср. сдвигов частот: ', mas_avg_freq)
+print(len(mas_ang_vel))
+print(len(mas_avg_freq))
+
+
+# Функция для аппроксимации точек линейной функцией
+def objective(x, a, b):
+    return a * x + b
+# choose the input and output variables
+x, y = mas_ang_vel, mas_avg_freq
+# curve fit
+popt, _ = curve_fit(objective, x, y)
+# summarize the parameter values
+a, b = popt
+print('y = %.5f * x + %.5f' % (a, b))
+print('Масштабный коэффициент: ', a)
+print('Смещение нуля: ', b)
+
+# plot input vs output
+plt.scatter(x, y)
+# define a sequence of inputs between the smallest and largest known inputs
+x_line = arange(min(x), max(x), 1)
+# calculate the output for the range
+y_line = objective(x_line, a, b)
+# create a line plot for the mapping function
+plt.plot(x_line, y_line, '--', color='red')
+plt.show()
+
+ang_velocity_measured = []   # Массив измеренных угловых скоростей
+
+for i in range(len(mas_avg_freq)):
+    rot_rate = (mas_avg_freq[i] / a) - (b/a)
+    ang_velocity_measured.append(rot_rate)
+print('Массив угловых скоростей: ', mas_ang_vel)
+print("Массив измеренных угловых скоростей: ", ang_velocity_measured)
+
 # Plot
 plt.scatter(zdf_ch2.index, sortdf_ch1, c='g')
 plt.scatter(zdf_ch1.index, sortdf_ch2, c='r')

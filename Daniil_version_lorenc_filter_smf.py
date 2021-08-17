@@ -423,6 +423,8 @@ print('y = %.5f * x + %.5f' % (a, b))
 print('Масштабный коэффициент: ', a)
 print('Смещение нуля: ', b)
 
+
+
 # plot input vs output
 plt.scatter(x, y)
 # define a sequence of inputs between the smallest and largest known inputs
@@ -433,6 +435,8 @@ y_line = objective(x_line, a, b)
 plt.plot(x_line, y_line, '--', color='red')
 plt.show()
 
+# Блок для расчета угловых скоростей
+
 ang_velocity_measured = []   # Массив измеренных угловых скоростей
 
 for i in range(len(mas_avg_freq)):
@@ -440,6 +444,30 @@ for i in range(len(mas_avg_freq)):
     ang_velocity_measured.append(rot_rate)
 print('Массив угловых скоростей: ', mas_ang_vel)
 print("Массив измеренных угловых скоростей: ", ang_velocity_measured)
+
+# Блок для расчета шума угловой скорости
+
+mas_rotation_noise =[]
+for i in range(len(mas_freq_noise)):
+    rotation_noise = mas_freq_noise[i]/a
+    mas_rotation_noise.append(rotation_noise)
+print("Шум угловой скорости: ", mas_rotation_noise)
+
+# Блок для расчета нелинейности масщтабного коэффицииента
+
+mas_fit_avg_freq = []
+mas_nonlin = []
+x1 = mas_ang_vel
+for i in range(len(mas_ang_vel)):
+    mas_fit_avg_freq.append(a * mas_ang_vel[i] + b)
+print(mas_fit_avg_freq)
+for i in range(len(mas_avg_freq)):
+    nonlin = (mas_fit_avg_freq[i] - mas_avg_freq[i])*100/abs(max(mas_avg_freq))
+    mas_nonlin.append(nonlin)
+print('Нелинейность масштабного коэффициента: ', mas_nonlin)
+plt.scatter(mas_ang_vel, mas_nonlin, c='g')
+plt.show()
+
 
 # Plot
 plt.scatter(zdf_ch2.index, sortdf_ch1, c='g')

@@ -39,6 +39,12 @@ mas_freq_noise = []
 # center_values_ch1 = []
 # center_values_ch2 = []
 
+mas_fwhm_ch1 = []
+mas_fwhm_ch2 = []
+
+mas_FSR_ch1 = []
+mas_FSR_ch2 = []
+
 # Цикл для открытия нескольких файлов
 for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
     for file in files:
@@ -108,6 +114,12 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 # report fit
                 # print(result.fit_report())
 
+                # calculation fwhm (averaged over all peaks)
+
+                cut_report_ch1 = result.fit_report()[result.fit_report().find('fwhm'):]
+                fwhm_ch1 = float(cut_report_ch1[10:cut_report_ch1.find('+/-')])
+                # print(fwhm_ch1)
+                mas_fwhm_ch1.append(fwhm_ch1)
                 # plot fit
                 # result.plot_fit()
                 # plt.show()
@@ -117,6 +129,16 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 # print(i)
                 int_fit_ch1.append(dif_peaks_ch1)
             # print(int_fit_ch1)
+
+                # calculation FSR ch1
+
+            for i in range(len(center_values_ch1) - 1):
+                mas_FSR_ch1.append(center_values_ch1[i + 1] - center_values_ch1[i])
+            print('mas_FSR_Ch1: ', mas_FSR_ch1)
+            print('FSR_Ch1', sum(mas_FSR_ch1) / len(mas_FSR_ch1) * velocity_sweep)
+            print(mas_fwhm_ch1)
+            print('FWHM_Ch1: ', sum(mas_fwhm_ch1) / len(mas_fwhm_ch1) * velocity_sweep)
+
         else:
             if filename.find('Ch2') != -1 and filename.find('-') == -1:
                 print(filename)
@@ -182,6 +204,13 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     # report fit
                     # print(result.fit_report())
 
+                    # calculation fwhm ch2 (averaged over all peaks)
+
+                    cut_report_ch2 = result.fit_report()[result.fit_report().find('fwhm'):]
+                    fwhm_ch2 = float(cut_report_ch2[10: cut_report_ch2.find('+/-')])
+                    # print(fwhm_ch2)
+                    mas_fwhm_ch2.append(fwhm_ch2)
+
                     # plot fit
                     # result.plot_fit()
                     # plt.show()
@@ -190,6 +219,17 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     center_values_ch2.append(result.params['center'].value)
                     # print(i)
                     int_fit_ch2.append(dif_peaks_ch2)
+
+                    # calculation FSR Ch2
+
+                for i in range(len(center_values_ch2) - 1):
+                    mas_FSR_ch2.append(center_values_ch2[i + 1] - center_values_ch2[i])
+                print('mas_FSR_Ch2: ', mas_FSR_ch2)
+                print('FSR_Ch2', sum(mas_FSR_ch2) / len(mas_FSR_ch2) * velocity_sweep)
+
+                print(mas_fwhm_ch2)
+                print('FWHM_Ch2: ', sum(mas_fwhm_ch2) / len(mas_fwhm_ch2) * velocity_sweep)
+
                 # print(int_fit_ch2)
                 # print('Модель функции: ', model_func)
                 # print('Центры пиков функции ch1: ', center_values_ch1)
@@ -293,6 +333,12 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 # report fit
                 # print(result.fit_report())
 
+                # calculation FWHM (averaged over all peaks)
+
+                cut_report_ch1 = result.fit_report()[result.fit_report().find('fwhm'):]
+                fwhm_ch1 = float(cut_report_ch1[10:cut_report_ch1.find('+/-')])
+                # print(fwhm_ch1)
+                mas_fwhm_ch1.append(fwhm_ch1)
                 # plot fit
                 # result.plot_fit()
                 # plt.show()
@@ -302,6 +348,15 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                 # print(i)
                 int_fit_ch1.append(dif_peaks_ch1)
             # print(int_fit_ch1)
+
+                # calculation FSR ch1
+
+            for i in range(len(center_values_ch1) - 1):
+                mas_FSR_ch1.append(center_values_ch1[i + 1] - center_values_ch1[i])
+            print('mas_FSR_Ch1: ', mas_FSR_ch1)
+            print('FSR_Ch1', sum(mas_FSR_ch1) / len(mas_FSR_ch1) * velocity_sweep)
+            print(mas_fwhm_ch1)
+            print('FWHM_Ch1: ', sum(mas_fwhm_ch1) / len(mas_fwhm_ch1) * velocity_sweep)
         else:
             if filename.find('Ch2') != -1 and filename.find('-') != -1:
                 print(filename)
@@ -362,6 +417,13 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     # report fit
                     # print(result.fit_report())
 
+                    # calculation fwhm ch2 (averaged over all peaks)
+
+                    cut_report_ch2 = result.fit_report()[result.fit_report().find('fwhm'):]
+                    fwhm_ch2 = float(cut_report_ch2[10: cut_report_ch2.find('+/-')])
+                    # print(fwhm_ch2)
+                    mas_fwhm_ch2.append(fwhm_ch2)
+                    
                     # plot fit
                     # result.plot_fit()
                     # plt.show()
@@ -370,6 +432,17 @@ for root, dirs, files in os.walk('E:\\KDA\\files\\smfresonator'):
                     center_values_ch2.append(result.params['center'].value)
                     # print(i)
                     int_fit_ch2.append(dif_peaks_ch2)
+
+                    # calculation FSR Ch2
+
+                for i in range(len(center_values_ch2) - 1):
+                    mas_FSR_ch2.append(center_values_ch2[i + 1] - center_values_ch2[i])
+                print('mas_FSR_Ch2: ', mas_FSR_ch2)
+                print('FSR_Ch2', sum(mas_FSR_ch2) / len(mas_FSR_ch2) * velocity_sweep)
+
+                print(mas_fwhm_ch2)
+                print('FWHM_Ch2: ', sum(mas_fwhm_ch2) / len(mas_fwhm_ch2) * velocity_sweep)
+
                 # print(int_fit_ch2)
                 # print('Модель функции: ', model_func)
                 # print('Центры пиков функции ch1: ', center_values_ch1)

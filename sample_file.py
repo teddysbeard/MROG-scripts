@@ -29,9 +29,11 @@ N_filt = 1
 F_filt = 900
 F_filt_ch2 = 900
 model_func = LorentzianModel()
-fit = True
+fit = True  # Включает и выключает апроксимацию Лоренцом, Гауссом, Фойгхтом из библиотеки lmfit
 build_graphs = False
-polyn = True
+nonfit = True  # Включает  нахождение пиков в изначально отфильтрованном функцией  filter_signal и /
+# отнормированном сигнале функцией normalization_and_find_peaks
+moving_average_const = False  # Включает алгоритм со скользящим средним
 mas_avg_freq = []
 mas_ang_vel = []
 # ang_velocity = ''
@@ -64,10 +66,14 @@ for run in range(len(measurements) - 1):
             measurements[i], measurements[i + 1] = measurements[i + 1], measurements[i]
             count += 1
 print(measurements)
+print(len(measurements))
 # print(files)
 # print(measurements, len(measurements))
 
 for i in range(0, len(measurements) - 1, 2):
+    print(i)
+
+
     def open_file_and_create_data_frame(filename):
         # download file measurement
 
@@ -76,16 +82,19 @@ for i in range(0, len(measurements) - 1, 2):
                         names=['2', '1', 'ch1'],
                         skiprows=6, engine='python')
         df_ch = pd.DataFrame(x, columns=['ch1'])
+        # print(df_ch)
         t = pd.DataFrame(x, columns=['1'])
+        # print(t)
         # for ch1
         y = df_ch.values.flatten()
         # print('y', y, len(y))
         # print(measurements[0])
-        return y
+        return y, df_ch, t
 
 
-    open_file_and_create_data_frame(filename=measurements[i])
-    y = open_file_and_create_data_frame(filename=measurements[i])
+    # open_file_and_create_data_frame(filename=measurements[i])
+    y1 = open_file_and_create_data_frame(filename=measurements[i])[0]
+    df_ch1 = open_file_and_create_data_frame(filename=measurements[i])[1]
 
 
     def ang_velocities(end_cut_filename, filename):
@@ -103,193 +112,358 @@ for i in range(0, len(measurements) - 1, 2):
 
     ang_velocities(end_cut_filename='ds_', filename=measurements[i])
 
-
-    def filter_signal(var_y):
-        b, a = signal.butter(N_filt, F_filt, fs=(1 / ticks))
-        z = signal.filtfilt(b, a, var_y)
-        zdf_ch = pd.DataFrame(data=z, columns=['column1'])
-        # print('zdf_ch', zdf_ch, len(zdf_ch), type(zdf_ch))
-        # print(type(z))
-        return zdf_ch
+    if moving_average_const == True:
+        print('moving average')
 
 
-    filter_signal(var_y=y)
-    zdf_ch1 = filter_signal(var_y=y)
+        def moving_average(df_ch_arg):
+            T_OBL = 199994  # число последовательных отсчетов АЦП из входного файла для обработки и визуализации работы алгоритма
+            obl_vibora = 100  # ед.изм. - отсчеты АЦП, область определения единственного,
+            # самого максимального (или минимального) экстремума среди прошедших окно обнаружения
+            size_wind = 128  # размер адаптивного окна справа и слева
+            kth = 1.1  # коэффициент адаптивного окна
+            TH_FIX = 0.1  # уровень фиксированного порога для отсекания ложных пиков
+            windowSize = 20  # размер окна усреднения
+
+            # Сглаживание методом скользящего среднего
+            rolling_mean = df_ch_arg.ch1.rolling(window=20).mean()  # Размер окна усреднения 20
+            rolling_mean2 = df_ch_arg.ch1.rolling(window=50).mean()  # Размер окна усреднения 50
+            # Адаптивное скользящее окно обнаружения
+            Nd = T_OBL
+            mas_data = []  # то же самое что и M_Det
+            mas_data_indices = []
+            windet = 1 / size_wind
+            DATA_THRESHOLD = rolling_mean.values.flatten().tolist()
+            counter = 0
+            for k in range(130, (Nd - 128 - 1 + 1)):
+                th1 = sum(DATA_THRESHOLD[k - size_wind - 1:k - 1 - 1]) * kth * windet
+                th2 = sum(DATA_THRESHOLD[k + 1 + 1:k + size_wind + 1]) * kth * windet
+                counter += 1
+                # print(th1)
+                # print(th2)
+                if DATA_THRESHOLD[k] > th1 and DATA_THRESHOLD[k] > th2 and DATA_THRESHOLD[k] > TH_FIX and \
+                        DATA_THRESHOLD[k] > \
+                        DATA_THRESHOLD[k + 1] and DATA_THRESHOLD[k] > DATA_THRESHOLD[k - 1]:
+                    mas_data.append(DATA_THRESHOLD[k])
+
+                    mas_data_indices.append(k)
+            num = 0
+            Nd_Det = []
+            print('mas_data initial', len(mas_data), mas_data)
+            mas_data_current = []
+            for k in mas_data_indices:
+                # print('iteration')
+                mas_data_current.append(max(DATA_THRESHOLD[k - 50:k + 51]))
+            print('mas_data current', len(mas_data_current), mas_data_current)
+            if mas_data_current == mas_data:
+                print('Yes')
+
+            '''for j in range(51, (len(DATA_THRESHOLD) - 50)):
+                mas_left = DATA_THRESHOLD[j - 50:j - 1]
+                mas_right = DATA_THRESHOLD[j + 1:j + 50]
+                #print(len(mas_left))
+                #print(len(mas_right))
+                for k in mas_data_indices:
+                    for m in range(len(mas_left)):
+                        if DATA_THRESHOLD[k] > mas_left[m] and DATA_THRESHOLD[k] > mas_right[m]:
+                            Nd_Det.append(DATA_THRESHOLD[k])
+            print('Nd_Det', Nd_Det)'''
+
+            '''for j in range(51, (len(DATA_THRESHOLD) - 50)):
+                for k in range():
+                mas_left = DATA_THRESHOLD[j - 50:j - 1]
+                mas_right = DATA_THRESHOLD[j + 1:j + 50]
+                print(len(mas_left))
+                print(len(mas_right))'''
+
+            '''for j in range(51, (len(mas_data_indices) - 50)):
+                mas_left = mas_data[j - 50:j - 1]
+                mas_right = mas_data[j + 1:j + 50]
+                print(len(mas_left))
+                print(len(mas_right))
+                for k in range(len(mas_left)):
+                    for m in range(len(mas_right)):
+                        if mas_data[j] > mas_left[k] and mas_data[j] > mas_right[m]:
+                            mas_data[j] = mas_data[j]
+                            num = num + 1
+                            Nd_Det.append(j)
+                        else:
+                            mas_data[j] = 0
+            print('mas_data current', len(mas_data), mas_data)'''
+            # print(mas_data)
+            # print(mas_data_indices)
+            # print(counter)
+            # plt.plot(mas_data_indices, mas_data, '*', label='M_Det', color='green')
+            # plt.plot([i for i in range(1, len(rolling_mean) + 1)], rolling_mean, label='20', color='orange')
+            # plt.plot([i for i in range(1, len(rolling_mean2) + 1)], rolling_mean2, label='50', color='magenta')
+            # plt.legend(loc='upper left')
+            # plt.show()
+            return mas_data, mas_data_indices
 
 
-    # normalization
-    def normalization_and_find_peaks(zdf_ch_var):
-        df_ch_norm = (zdf_ch_var - zdf_ch_var.min()) / (zdf_ch_var.max() - zdf_ch_var.min())
-        # print('df_ch_norm', df_ch_norm)
-        # Find all peaks
-        zdf_ch_var['max'] = df_ch_norm.column1[(df_ch_norm.column1.shift(1) < df_ch_norm.column1) & (
-                df_ch_norm.column1.shift(-1) < df_ch_norm.column1)]
-        sortdf_ch = zdf_ch_var['max'].where(zdf_ch_var['max'] > threshold)
-        # print('sortdf_ch', sortdf_ch)
-        # Find only peaks
-        indexdf = sortdf_ch.notnull()
-        index_peaks_ch = zdf_ch_var[indexdf].index
-        peaks_time_ch = index_peaks_ch * ticks
-        number_of_peaks = len(peaks_time_ch.values)
+        moving_average(df_ch_arg=df_ch1)
+        mas_data_mov_av_ch1 = moving_average(df_ch_arg=df_ch1)[0]
+        mas_data_indices_ch1 = moving_average(df_ch_arg=df_ch1)[1]
+        print(mas_data_mov_av_ch1)
+        print(len(mas_data_mov_av_ch1))
+        print('mas_data_indices_ch1', mas_data_indices_ch1)
+        mas_fwhm_ch = []
+        mas_FSR_ch = []
 
-        # print('Index peaks ch', index_peaks_ch, len(index_peaks_ch))
-        # print('number_of_peaks_ch', number_of_peaks)
-        # print('Time peaks ch', peaks_time_ch)
-        # print('df_ch_norm#', df_ch_norm)
-        return df_ch_norm, index_peaks_ch, sortdf_ch
+        # calculation fwhm (averaged over all peaks)
+        # ??????
 
+        # calculation FSR ch1
 
-    tuple_df_norm_and_index_peaks = normalization_and_find_peaks(zdf_ch_var=zdf_ch1)
+        for j in range(len(mas_data_indices_ch1) - 1):
+            mas_FSR_ch.append((mas_data_indices_ch1[j + 1] - mas_data_indices_ch1[j]) * ticks)
+        print('mas_FSR_Ch: ', mas_FSR_ch, len(mas_FSR_ch))
+        fsr_avg = sum(mas_FSR_ch) / len(mas_FSR_ch) * velocity_sweep
+        # fwhm_avg = sum(mas_fwhm_ch) / len(mas_fwhm_ch) * velocity_sweep
+        # print('fwhm_avg', fwhm_avg)
+        print('fsr_avg', fsr_avg)
+        mas_FSR_ch.clear()
 
-    # print(tuple_df_norm_and_index_peaks)
+        # FOR CH2
+        open_file_and_create_data_frame(filename=measurements[i + 1])
 
-    # tuple_df_norm_and_index_peaks = normalization_and_find_peaks(zdf_ch_var=zdf_ch1)
+        y2 = open_file_and_create_data_frame(filename=measurements[i + 1])[0]
+        df_ch2 = open_file_and_create_data_frame(filename=measurements[i + 1])[1]
 
-    # print(index_peaks_ch1, type(index_peaks_ch1), len(index_peaks_ch1))
+        ang_velocities(end_cut_filename='ds_', filename=measurements[i + 1])
 
-    # Find interval fitting ch1
-    if fit == True:
-        def find_fitting_interval(df_ch_norm, index_peaks_ch_var):
-            int_fit_ch = []
-            center_values_ch = []
-            mas_fwhm_ch = []
-            mas_FSR_ch = []
-            # print('len', len(index_peaks_ch_var))
-            for i in range(1, len(index_peaks_ch_var) - 1):
-                dif_peaks_ch = ((index_peaks_ch_var[i + 1] - index_peaks_ch_var[i]))
-                # print('index_peaks_ch_var[i]', index_peaks_ch_var[i])
-                # print('dif_peaks_ch', dif_peaks_ch)
-                dif_peaks_ch_del = round(dif_peaks_ch / 2)
-                # print('dif_peaks_ch_del', dif_peaks_ch_del)
-                int_fit_ch.append(dif_peaks_ch)
-                # print('int_fit_ch', int_fit_ch)
-                # print('index_peaks_ch_var[i]', i, index_peaks_ch_var[i])
-                # print('df_ch_norm', df_ch_norm, type(df_ch_norm))
-                # s = index_peaks_ch1[0][index_peaks_ch_var[i] - dif_peaks_ch_del: index_peaks_ch_var[i] + dif_peaks_ch_del]
-                s = df_ch_norm[index_peaks_ch_var[i] - dif_peaks_ch_del: index_peaks_ch_var[i] + dif_peaks_ch_del]
-                # print('s', s, type(s))
-                # print('s', s, len(s))
-                x = s.index * ticks
-                # print('x', x, len(x))
+        moving_average(df_ch_arg=df_ch2)
+        mas_data_mov_av_ch2 = moving_average(df_ch_arg=df_ch2)[0]
+        mas_data_indices_ch2 = moving_average(df_ch_arg=df_ch2)[1]
+        print(mas_data_mov_av_ch2)
+        print('mas_data_indices_ch2', mas_data_indices_ch2)
+        print(len(mas_data_mov_av_ch2))
 
-                y_fit = s.values.flatten()
-                x_fit = x.values.flatten()
-                # print(y_fit, len(y_fit))
-                # print(x_fit, len(x_fit))
+        # calculation FSR ch2
 
-                # choose model
-                model = model_func
+        for j in range(len(mas_data_indices_ch2) - 1):
+            mas_FSR_ch.append((mas_data_indices_ch2[j + 1] - mas_data_indices_ch2[j]) * ticks)
+        print('mas_FSR_Ch: ', mas_FSR_ch, len(mas_FSR_ch))
+        fsr_avg = sum(mas_FSR_ch) / len(mas_FSR_ch) * velocity_sweep
+        # fwhm_avg = sum(mas_fwhm_ch) / len(mas_fwhm_ch) * velocity_sweep
+        # print('fwhm_avg', fwhm_avg)
+        print('fsr_avg', fsr_avg)
 
-                # construction fit
-                params = model.guess(y_fit, x=x_fit)
-                result = model.fit(y_fit, params, x=x_fit)
-
-                # report fit
-                # print(result.fit_report())
-
-                # calculation fwhm (averaged over all peaks)
-                cut_report_ch = result.fit_report()[result.fit_report().find('fwhm'):]
-                fwhm_ch = float(cut_report_ch[10:cut_report_ch.find('+/-')])
-                # print('fwhm_ch', fwhm_ch)
-                mas_fwhm_ch.append(fwhm_ch)
-                # plot fit
-                # result.plot_fit()
-                # plt.show()
-
-                # find center
-
-                center_values_ch.append(result.params['center'].value)
-                int_fit_ch.append(dif_peaks_ch)
-            print('mas_fwhm_ch', mas_fwhm_ch)
-            # print('center_values_ch', center_values_ch)
-
-            # calculation FSR ch1
-
-            for i in range(len(center_values_ch) - 1):
-                mas_FSR_ch.append(center_values_ch[i + 1] - center_values_ch[i])
-            print('mas_FSR_Ch: ', mas_FSR_ch)
-            fsr_avg = sum(mas_FSR_ch) / len(mas_FSR_ch) * velocity_sweep
-            fwhm_avg = sum(mas_fwhm_ch) / len(mas_fwhm_ch) * velocity_sweep
-            print('fwhm_avg', fwhm_avg)
-            print('fsr_avg', fsr_avg)
-            return fsr_avg, fwhm_avg, center_values_ch
-
-
-        result_ch1 = find_fitting_interval(df_ch_norm=tuple_df_norm_and_index_peaks[0],
-                                           index_peaks_ch_var=tuple_df_norm_and_index_peaks[1])
-        print('Центры пиков функции ch1:', result_ch1[2])
-    print()
-
-    # FOR CH2
-    open_file_and_create_data_frame(filename=measurements[i + 1])
-
-    y2 = open_file_and_create_data_frame(filename=measurements[i + 1])
-
-    ang_velocities(end_cut_filename='ds_', filename=measurements[i + 1])
-    zdf_ch2 = filter_signal(var_y=y2)
-    tuple_df = normalization_and_find_peaks(zdf_ch_var=zdf_ch2)
-    # print(tuple_df)
-    if fit == True:
-        result_ch2 = find_fitting_interval(df_ch_norm=tuple_df[0], index_peaks_ch_var=tuple_df[1])
-        print('Центры пиков функции ch2:', result_ch2[2])
-
-    # calc dif times and freq
-    if polyn == True and fit == True:
-        def dif_times_and_freqs_polyn(center_values_ch1, center_values_ch2):
-            dif = []
-            freq = []
-            print(len(center_values_ch1))
-            print(len(center_values_ch2))
-            for i in range(0, len(center_values_ch1)):
-                dif.append((center_values_ch1[i] - center_values_ch2[i]))
-            for i in range(0, len(center_values_ch1)):
-                freq.append((center_values_ch1[i] - center_values_ch2[i]) * velocity_sweep)
-            # print('Разность времен: ', dif)
-            # print('Разность частот: ', freq)
-            avg_freq = np.mean(freq)
+        mas_freq = []
+        mas_dif = []
+        if len(mas_data_indices_ch1) == len(mas_data_indices_ch2):
+            for j in range(len(mas_data_indices_ch1)):
+                dif = ((mas_data_indices_ch1[j] - mas_data_indices_ch2[j])) * ticks
+                # dif = (mas_data_indices_ch1[j] - mas_data_indices_ch2[j]) * ticks
+                # print('Difference', dif1)
+                # print('Разность времен: ', dif)
+                freq = dif * velocity_sweep
+                # print('Разность частот: ', freq)
+                mas_freq.append(freq)
+                # mas_dif.append(dif)
+            # print(mas_dif)
+            avg_freq = np.mean(mas_freq)
             print("Сдвиг частот ср.: ", avg_freq)
             mas_avg_freq.append(avg_freq)
-            noise_freq = np.std(freq)
-            # print("Шум частот : ", noise_freq)
-            mas_freq_noise.append(noise_freq)
-            return
-
-
-        dif_times_and_freqs_polyn(center_values_ch1=result_ch1[2], center_values_ch2=result_ch2[2])
-    else:
-        def dif_times_and_freqs(peaks_time_ch1, peaks_time_ch2):
-            dif = (peaks_time_ch1 - peaks_time_ch2)* ticks
-            # print('Difference', dif1)
-            # print('Разность времен: ', dif)
-            freq = dif * velocity_sweep
-            # print('Разность частот: ', freq)
-            avg_freq = np.mean(freq)
-            print("Сдвиг частот ср.: ", avg_freq)
-            mas_avg_freq.append(avg_freq)
-            noise_freq = np.std(freq)
+            noise_freq = np.std(mas_freq)
             print("Шум частот : ", noise_freq)
             mas_freq_noise.append(noise_freq)
-            return
+        else:
+            print('FUCK')
+
+    elif moving_average_const == False:
+
+        def filter_signal(var_y):
+            b, a = signal.butter(N_filt, F_filt, fs=(1 / ticks))
+            z = signal.filtfilt(b, a, var_y)
+            zdf_ch = pd.DataFrame(data=z, columns=['column1'])
+            # print('zdf_ch', zdf_ch, len(zdf_ch), type(zdf_ch))
+            # print(type(z))
+            return zdf_ch
 
 
-        dif_times_and_freqs(peaks_time_ch1=tuple_df_norm_and_index_peaks[1], peaks_time_ch2=tuple_df[1])
-
-    if build_graphs == True:
-        def plot_graphs(a1, b1, c1, a2, b2, c2):
-            # Plot
-            plt.scatter(a1, b1, c='g')
-            plt.scatter(a2, b2, c='r')
-            plt.plot(a1, c1, label='CH1_norm')
-            plt.plot(a2, c2, label='CH2_norm')
-            plt.show()
-
-            return
+        filter_signal(var_y=y1)
+        zdf_ch1 = filter_signal(var_y=y1)
 
 
-        plot_graphs(a1=zdf_ch1.index, b1=tuple_df_norm_and_index_peaks[2], c1=tuple_df_norm_and_index_peaks[0],
-                    a2=zdf_ch2.index, b2=tuple_df[2], c2=tuple_df[0])
-    print('i', i)
-    print()
+        # normalization
+        def normalization_and_find_peaks(zdf_ch_var):
+            df_ch_norm = (zdf_ch_var - zdf_ch_var.min()) / (zdf_ch_var.max() - zdf_ch_var.min())
+            # print('df_ch_norm', df_ch_norm)
+            # Find all peaks
+            zdf_ch_var['max'] = df_ch_norm.column1[(df_ch_norm.column1.shift(1) < df_ch_norm.column1) & (
+                    df_ch_norm.column1.shift(-1) < df_ch_norm.column1)]
+            sortdf_ch = zdf_ch_var['max'].where(zdf_ch_var['max'] > threshold)
+            # print('sortdf_ch', sortdf_ch)
+            # Find only peaks
+            indexdf = sortdf_ch.notnull()
+            index_peaks_ch = zdf_ch_var[indexdf].index
+            peaks_time_ch = index_peaks_ch * ticks
+            number_of_peaks = len(peaks_time_ch.values)
+
+            # print('Index peaks ch', index_peaks_ch, len(index_peaks_ch))
+            # print('number_of_peaks_ch', number_of_peaks)
+            # print('Time peaks ch', peaks_time_ch)
+            # print('df_ch_norm#', df_ch_norm)
+            return df_ch_norm, index_peaks_ch, sortdf_ch
+
+
+        tuple_df_norm_and_index_peaks = normalization_and_find_peaks(zdf_ch_var=zdf_ch1)
+
+        # print(tuple_df_norm_and_index_peaks)
+
+        # tuple_df_norm_and_index_peaks = normalization_and_find_peaks(zdf_ch_var=zdf_ch1)
+
+        # print(index_peaks_ch1, type(index_peaks_ch1), len(index_peaks_ch1))
+
+        # Find interval fitting ch1
+        if fit == True:
+            def find_fitting_interval(df_ch_norm, index_peaks_ch_var):
+                int_fit_ch = []
+                center_values_ch = []
+                mas_fwhm_ch = []
+                mas_FSR_ch = []
+                # print('len', len(index_peaks_ch_var))
+                for i in range(1, len(index_peaks_ch_var) - 1):
+                    dif_peaks_ch = ((index_peaks_ch_var[i + 1] - index_peaks_ch_var[i]))
+                    # print('index_peaks_ch_var[i]', index_peaks_ch_var[i])
+                    # print('dif_peaks_ch', dif_peaks_ch)
+                    dif_peaks_ch_del = round(dif_peaks_ch / 2)
+                    # print('dif_peaks_ch_del', dif_peaks_ch_del)
+                    int_fit_ch.append(dif_peaks_ch)
+                    # print('int_fit_ch', int_fit_ch)
+                    # print('index_peaks_ch_var[i]', i, index_peaks_ch_var[i])
+                    # print('df_ch_norm', df_ch_norm, type(df_ch_norm))
+                    # s = index_peaks_ch1[0][index_peaks_ch_var[i] - dif_peaks_ch_del: index_peaks_ch_var[i] + dif_peaks_ch_del]
+                    s = df_ch_norm[index_peaks_ch_var[i] - dif_peaks_ch_del: index_peaks_ch_var[i] + dif_peaks_ch_del]
+                    # print('s', s, type(s))
+                    # print('s', s, len(s))
+                    # print(s.index)
+                    x = s.index * ticks
+                    # print('x',x)
+                    # print('x', x, len(x))
+
+                    y_fit = s.values.flatten()
+                    x_fit = x.values.flatten()
+                    # print(y_fit, len(y_fit))
+                    # print(x_fit, len(x_fit))
+
+                    # choose model
+                    model = model_func
+
+                    # construction fit
+                    params = model.guess(y_fit, x=x_fit)
+                    result = model.fit(y_fit, params, x=x_fit)
+
+                    # report fit
+                    # print(result.fit_report())
+
+                    # calculation fwhm (averaged over all peaks)
+                    cut_report_ch = result.fit_report()[result.fit_report().find('fwhm'):]
+                    fwhm_ch = float(cut_report_ch[10:cut_report_ch.find('+/-')])
+                    # print('fwhm_ch', fwhm_ch)
+                    mas_fwhm_ch.append(fwhm_ch)
+                    # plot fit
+                    # result.plot_fit()
+                    # plt.show()
+
+                    # find center
+
+                    center_values_ch.append(result.params['center'].value)
+                    int_fit_ch.append(dif_peaks_ch)
+                print('mas_fwhm_ch', mas_fwhm_ch)
+                # print('center_values_ch', center_values_ch)
+
+                # calculation FSR ch
+
+                for i in range(len(center_values_ch) - 1):
+                    mas_FSR_ch.append(center_values_ch[i + 1] - center_values_ch[i])
+                print('mas_FSR_Ch: ', mas_FSR_ch)
+                fsr_avg = sum(mas_FSR_ch) / len(mas_FSR_ch) * velocity_sweep
+                fwhm_avg = sum(mas_fwhm_ch) / len(mas_fwhm_ch) * velocity_sweep
+                print('fwhm_avg', fwhm_avg)
+                print('fsr_avg', fsr_avg)
+                return fsr_avg, fwhm_avg, center_values_ch
+
+
+            result_ch1 = find_fitting_interval(df_ch_norm=tuple_df_norm_and_index_peaks[0],
+                                               index_peaks_ch_var=tuple_df_norm_and_index_peaks[1])
+            print('Центры пиков функции ch1:', result_ch1[2])
+        print()
+        '''Часть скрипта для сигнала со 2-го канала'''
+
+        # FOR CH2
+        open_file_and_create_data_frame(filename=measurements[i + 1])
+
+        y2 = open_file_and_create_data_frame(filename=measurements[i + 1])[0]
+        df_ch = open_file_and_create_data_frame(filename=measurements[i + 1])[1]
+
+        ang_velocities(end_cut_filename='ds_', filename=measurements[i + 1])
+        zdf_ch2 = filter_signal(var_y=y2)
+        tuple_df = normalization_and_find_peaks(zdf_ch_var=zdf_ch2)
+        # print(tuple_df)
+
+        if fit == True:
+            result_ch2 = find_fitting_interval(df_ch_norm=tuple_df[0], index_peaks_ch_var=tuple_df[1])
+            print('Центры пиков функции ch2:', result_ch2[2])
+
+        # calc dif times and freq
+        if fit == True:
+            def dif_times_and_freqs_polyn(center_values_ch1, center_values_ch2):
+                dif = []
+                freq = []
+                print(len(center_values_ch1))
+                print(len(center_values_ch2))
+                for i in range(0, len(center_values_ch1)):
+                    dif.append((center_values_ch1[i] - center_values_ch2[i]))
+                for i in range(0, len(center_values_ch1)):
+                    freq.append((center_values_ch1[i] - center_values_ch2[i]) * velocity_sweep)
+                # print('Разность времен: ', dif)
+                # print('Разность частот: ', freq)
+                avg_freq = np.mean(freq)
+                print("Сдвиг частот ср.: ", avg_freq)
+                mas_avg_freq.append(avg_freq)
+                noise_freq = np.std(freq)
+                # print("Шум частот : ", noise_freq)
+                mas_freq_noise.append(noise_freq)
+                return
+
+
+            dif_times_and_freqs_polyn(center_values_ch1=result_ch1[2], center_values_ch2=result_ch2[2])
+        '''elif nonfit == True:
+            def dif_times_and_freqs(peaks_time_ch1, peaks_time_ch2):
+                dif = (peaks_time_ch1 - peaks_time_ch2) * ticks
+                # print('Difference', dif1)
+                # print('Разность времен: ', dif)
+                freq = dif * velocity_sweep
+                # print('Разность частот: ', freq)
+                avg_freq = np.mean(freq)
+                print("Сдвиг частот ср.: ", avg_freq)
+                mas_avg_freq.append(avg_freq)
+                noise_freq = np.std(freq)
+                print("Шум частот : ", noise_freq)
+                mas_freq_noise.append(noise_freq)
+                return
+
+
+            dif_times_and_freqs(peaks_time_ch1=tuple_df_norm_and_index_peaks[1], peaks_time_ch2=tuple_df[1])'''
+
+        if build_graphs == True:
+            def plot_graphs(a1, b1, c1, a2, b2, c2):
+                # Plot
+                plt.scatter(a1, b1, c='g')
+                plt.scatter(a2, b2, c='r')
+                plt.plot(a1, c1, label='CH1_norm')
+                plt.plot(a2, c2, label='CH2_norm')
+                plt.show()
+
+                return
+
+
+            plot_graphs(a1=zdf_ch1.index, b1=tuple_df_norm_and_index_peaks[2], c1=tuple_df_norm_and_index_peaks[0],
+                        a2=zdf_ch2.index, b2=tuple_df[2], c2=tuple_df[0])
+        print('i', i)
+        print()
 print('Массив угловых скоростей: ', mas_ang_vel)
 print('Массив ср. сдвигов частот: ', mas_avg_freq)
 

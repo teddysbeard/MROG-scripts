@@ -29,11 +29,12 @@ N_filt = 1
 F_filt = 900
 F_filt_ch2 = 900
 model_func = LorentzianModel()
-fit = True  # Включает и выключает апроксимацию Лоренцом, Гауссом, Фойгхтом из библиотеки lmfit
+fit = False  # Включает и выключает апроксимацию Лоренцом, Гауссом, Фойгхтом из библиотеки lmfit
 build_graphs = False
-nonfit = True  # Включает  нахождение пиков в изначально отфильтрованном функцией  filter_signal и /
+nonfit = False  # Включает  нахождение пиков в изначально отфильтрованном функцией  filter_signal и /
 # отнормированном сигнале функцией normalization_and_find_peaks
 moving_average_const = False  # Включает алгоритм со скользящим средним
+convolution_const = True
 mas_avg_freq = []
 mas_ang_vel = []
 # ang_velocity = ''
@@ -96,6 +97,9 @@ for i in range(0, len(measurements) - 1, 2):
     y1 = open_file_and_create_data_frame(filename=measurements[i])[0]
     df_ch1 = open_file_and_create_data_frame(filename=measurements[i])[1]
 
+    y2 = open_file_and_create_data_frame(filename=measurements[i + 1])[0]
+    df_ch2 = open_file_and_create_data_frame(filename=measurements[i + 1])[1]
+
 
     def ang_velocities(end_cut_filename, filename):
         ''' Из имени файла вырезаем теоретическое значение угловой скорости'''
@@ -111,8 +115,173 @@ for i in range(0, len(measurements) - 1, 2):
 
 
     ang_velocities(end_cut_filename='ds_', filename=measurements[i])
+    if convolution_const == True:
+        print('measurements[i]', measurements[i])
 
-    if moving_average_const == True:
+        alpha = 100
+        w_size = 1200
+        Nd = 199994
+        size_wind = 128  # размер адаптивного окна справа и слева
+        kth = 1.1  # коэффициент адаптивного окна
+        TH_FIX = 0.4  # уровень фиксированного порога для отсекания ложных пиков
+        windowSize = 20  # размер окна усреднения
+        windet = 1 / size_wind
+
+        build_graphs_conv = False  # Включает/выключает построение графиков
+
+        # for ch1
+        y1 = df_ch1.values.flatten()
+
+
+        # функция создания окна
+        def gauss_window(alpha, w_size):
+
+            sigma = (w_size - 1) / (2 * alpha)
+
+            window = signal.windows.gaussian(w_size, sigma)
+
+            return window
+
+
+        # функция свертки
+        def conv(data, window):
+
+            conv = np.convolve(data, window, mode='same')
+            print(type(conv))
+            return conv
+
+
+        # вызов функций для ch1
+
+        x = gauss_window(alpha, w_size)
+        y1_graph = conv(y1, x) * (alpha / w_size)
+        print(y1_graph)
+
+        # построение графиков
+        if build_graphs_conv == True:
+            plt.plot(x, c='m', label='window')
+            plt.plot(y1, c='b', label='conv')
+            plt.plot(y1_graph, c='g', label='data')
+            plt.legend(loc='best')
+            plt.show()
+
+        # for ch2
+        print('measurements[i]', measurements[i+1])
+        y2 = df_ch2.values.flatten()
+
+        # вызов функций для ch2
+
+        x = gauss_window(alpha, w_size)
+        y2_graph = conv(y2, x) * (alpha / w_size)
+        print(y2_graph)
+        # построение графиков для ch2
+
+        if build_graphs_conv == True:
+            plt.plot(x, c='m', label='window')
+            plt.plot(y2_graph, c='b', label='conv')
+            plt.plot(y2, c='g', label='data')
+            plt.legend(loc='best')
+            plt.show()
+        # Поиск пиков для данных ch1
+        mas_data_ch1 = []
+        mas_data_indices_ch1 = []
+        for k in range(130, (Nd - 128 - 1 + 1)):
+            #th1 = sum(y1_graph[k - size_wind - 1:k - 1 - 1]) * kth * windet
+            #th2 = sum(y1_graph[k + 1 + 1:k + size_wind + 1]) * kth * windet
+            # print(th1)
+            # print(th2)
+            if  y1_graph[k] > TH_FIX and y1_graph[k] > y1_graph[k + 1] and y1_graph[k] > y1_graph[k - 1]:
+                mas_data_ch1.append(y1_graph[k])
+
+                mas_data_indices_ch1.append(k)
+        num = 0
+        Nd_Det = []
+        print('mas_data initial', len(mas_data_ch1), mas_data_ch1)
+        mas_data_current_ch1 = []
+        # Дополнительная проверка пиков для данных ch1
+        for k in mas_data_indices_ch1:
+            # print('iteration')
+            mas_data_current_ch1.append(max(y1_graph[k - 50:k + 51]))
+        print('mas_data current', len(mas_data_current_ch1), mas_data_current_ch1)
+        if mas_data_current_ch1 == mas_data_ch1:
+            print('Yes')
+
+        mas_fwhm_ch = []
+        mas_FSR_ch = []
+
+        # calculation fwhm (averaged over all peaks)
+        # ??????
+
+        # calculation FSR ch1
+
+        for j in range(len(mas_data_indices_ch1) - 1):
+            mas_FSR_ch.append((mas_data_indices_ch1[j + 1] - mas_data_indices_ch1[j]) * ticks)
+        print('mas_FSR_Ch: ', mas_FSR_ch, len(mas_FSR_ch))
+        fsr_avg = sum(mas_FSR_ch) / len(mas_FSR_ch) * velocity_sweep
+        # fwhm_avg = sum(mas_fwhm_ch) / len(mas_fwhm_ch) * velocity_sweep
+        # print('fwhm_avg', fwhm_avg)
+        print('fsr_avg', fsr_avg)
+        mas_FSR_ch.clear()
+
+        # Поиск пиков для данных ch2
+        mas_data_ch2 = []
+        mas_data_indices_ch2 = []
+        for k in range(130, (Nd - 128 - 1 + 1)):
+            #th1 = sum(y2_graph[k - size_wind - 1:k - 1 - 1]) * kth * windet
+            #th2 = sum(y2_graph[k + 1 + 1:k + size_wind + 1]) * kth * windet
+            # print(th1)
+            # print(th2)
+            if y2_graph[k] > TH_FIX and y2_graph[k] > y2_graph[k + 1] and y2_graph[k] > y2_graph[k - 1]:
+                mas_data_ch2.append(y2_graph[k])
+
+                mas_data_indices_ch2.append(k)
+        num = 0
+        Nd_Det = []
+        print('mas_data initial', len(mas_data_ch2), mas_data_ch2)
+        mas_data_current_ch2 = []
+
+        # Дополнительная проверка пиков для данных ch2
+
+        for k in mas_data_indices_ch2:
+            # print('iteration')
+            mas_data_current_ch2.append(max(y2_graph[k - 50:k + 51]))
+        print('mas_data current', len(mas_data_current_ch2), mas_data_current_ch2)
+        if mas_data_current_ch2 == mas_data_ch2:
+            print('Yes')
+
+
+        # calculation FSR ch2
+
+        for j in range(len(mas_data_indices_ch2) - 1):
+            mas_FSR_ch.append((mas_data_indices_ch2[j + 1] - mas_data_indices_ch2[j]) * ticks)
+        print('mas_FSR_Ch: ', mas_FSR_ch, len(mas_FSR_ch))
+        fsr_avg = sum(mas_FSR_ch) / len(mas_FSR_ch) * velocity_sweep
+        # fwhm_avg = sum(mas_fwhm_ch) / len(mas_fwhm_ch) * velocity_sweep
+        # print('fwhm_avg', fwhm_avg)
+        print('fsr_avg', fsr_avg)
+
+        # Расчет разности частот, шума
+        mas_freq = []
+        mas_dif = []
+        if len(mas_data_indices_ch1) == len(mas_data_indices_ch2):
+            for j in range(len(mas_data_indices_ch1)):
+                dif = ((mas_data_indices_ch1[j] - mas_data_indices_ch2[j])) * ticks
+                # dif = (mas_data_indices_ch1[j] - mas_data_indices_ch2[j]) * ticks
+                # print('Difference', dif1)
+                # print('Разность времен: ', dif)
+                freq = dif * velocity_sweep
+                # print('Разность частот: ', freq)
+                mas_freq.append(freq)
+                # mas_dif.append(dif)
+            # print(mas_dif)
+            avg_freq = np.mean(mas_freq)
+            print("Сдвиг частот ср.: ", avg_freq)
+            mas_avg_freq.append(avg_freq)
+            noise_freq = np.std(mas_freq)
+            print("Шум частот : ", noise_freq)
+            mas_freq_noise.append(noise_freq)
+
+    elif moving_average_const == True:
         print('moving average')
 
 
@@ -269,9 +438,9 @@ for i in range(0, len(measurements) - 1, 2):
             print("Шум частот : ", noise_freq)
             mas_freq_noise.append(noise_freq)
         else:
-            print('FUCK')
+            print('Error')
 
-    elif moving_average_const == False:
+    elif moving_average_const == False and convolution_const == False:
 
         def filter_signal(var_y):
             b, a = signal.butter(N_filt, F_filt, fs=(1 / ticks))
@@ -390,13 +559,14 @@ for i in range(0, len(measurements) - 1, 2):
                                                index_peaks_ch_var=tuple_df_norm_and_index_peaks[1])
             print('Центры пиков функции ch1:', result_ch1[2])
         print()
+
         '''Часть скрипта для сигнала со 2-го канала'''
 
         # FOR CH2
         open_file_and_create_data_frame(filename=measurements[i + 1])
 
         y2 = open_file_and_create_data_frame(filename=measurements[i + 1])[0]
-        df_ch = open_file_and_create_data_frame(filename=measurements[i + 1])[1]
+        df_ch2 = open_file_and_create_data_frame(filename=measurements[i + 1])[1]
 
         ang_velocities(end_cut_filename='ds_', filename=measurements[i + 1])
         zdf_ch2 = filter_signal(var_y=y2)

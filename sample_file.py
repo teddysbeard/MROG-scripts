@@ -77,7 +77,6 @@ for i in range(0, len(measurements) - 1, 2):
 
     def open_file_and_create_data_frame(filename):
         # download file measurement
-
         print(filename)
         x = pd.read_csv('E:\\KDA\\files\\smfresonator\\%s' % filename, delimiter=',',
                         names=['2', '1', 'ch1'],
@@ -118,12 +117,12 @@ for i in range(0, len(measurements) - 1, 2):
     if convolution_const == True:
         print('measurements[i]', measurements[i])
 
-        alpha = 100
-        w_size = 1200
+        alpha = 20
+        w_size = 1100
         Nd = 199994
         size_wind = 128  # размер адаптивного окна справа и слева
         kth = 1.1  # коэффициент адаптивного окна
-        TH_FIX = 0.4  # уровень фиксированного порога для отсекания ложных пиков
+        TH_FIX = 0.1  # уровень фиксированного порога для отсекания ложных пиков
         windowSize = 20  # размер окна усреднения
         windet = 1 / size_wind
 
